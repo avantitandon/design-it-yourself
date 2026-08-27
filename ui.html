@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ontario Design System Mapper</title>
+    <style>
+      :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: var(--figma-color-text); background: var(--figma-color-bg); }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { display: flex; min-height: 480px; flex-direction: column; gap: 16px; padding: 20px; }
+      h1 { margin: 0; font-size: 16px; line-height: 24px; }
+      p { margin: 0; }
+      .intro { color: var(--figma-color-text-secondary); line-height: 18px; }
+      .selection { min-height: 68px; padding: 12px; border: 1px solid var(--figma-color-border); border-radius: 8px; background: var(--figma-color-bg-secondary); }
+      .eyebrow { margin-bottom: 4px; color: var(--figma-color-text-secondary); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+      .node-name { overflow: hidden; font-size: 13px; font-weight: 600; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
+      .node-type { margin-top: 2px; color: var(--figma-color-text-secondary); font-size: 11px; }
+      fieldset { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+      legend { margin-bottom: 8px; font-size: 12px; font-weight: 600; }
+      .option { display: flex; cursor: pointer; gap: 10px; align-items: flex-start; padding: 11px 12px; border: 1px solid var(--figma-color-border); border-radius: 8px; }
+      .option:hover { background: var(--figma-color-bg-hover); }
+      .option:has(input:checked) { border-color: var(--figma-color-border-selected); background: var(--figma-color-bg-selected-secondary); }
+      .option.is-saved { border-color: #31974c; background: rgba(49, 151, 76, .12); }
+      input[type="radio"] { width: 14px; height: 14px; margin: 2px 0 0; accent-color: var(--figma-color-bg-brand); }
+      .option-title { display: block; font-weight: 600; line-height: 16px; }
+      .option-description { display: block; margin-top: 2px; color: var(--figma-color-text-secondary); font-size: 11px; line-height: 15px; }
+      .actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: auto; }
+      button { min-height: 32px; padding: 0 14px; border: 1px solid transparent; border-radius: 6px; font: inherit; font-weight: 600; cursor: pointer; }
+      button:focus-visible, input:focus-visible { outline: 2px solid var(--figma-color-border-selected); outline-offset: 2px; }
+      button:disabled, fieldset:disabled .option { cursor: not-allowed; opacity: .45; }
+      .primary { color: var(--figma-color-text-onbrand); background: var(--figma-color-bg-brand); }
+      .primary:not(:disabled):hover { background: var(--figma-color-bg-brand-hover); }
+      .secondary { color: var(--figma-color-text); border-color: var(--figma-color-border); background: transparent; }
+      .secondary:not(:disabled):hover { background: var(--figma-color-bg-hover); }
+      .status { min-height: 16px; color: var(--figma-color-text-secondary); font-size: 11px; line-height: 16px; }
+      .status.is-saving { color: var(--figma-color-text-secondary); }
+      .status.is-saved { color: #24843d; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div>
+        <h1>Ontario component mapping</h1>
+        <p class="intro">Connect a layer to its approved Ontario Design System component.</p>
+      </div>
+      <section class="selection" aria-live="polite">
+        <p class="eyebrow">Selected layer</p>
+        <p class="node-name" id="node-name">Nothing selected</p>
+        <p class="node-type" id="node-type">Select one layer in the canvas to begin.</p>
+      </section>
+      <fieldset id="mapping-options" disabled>
+        <legend>Map to</legend>
+        <label class="option">
+          <input type="radio" name="component" value="ontario-button" />
+          <span><span class="option-title">Button</span><span class="option-description">An action or form submission control.</span></span>
+        </label>
+        <label class="option">
+          <input type="radio" name="component" value="ontario-text-input" />
+          <span><span class="option-title">Text input</span><span class="option-description">A single-line field for typed information.</span></span>
+        </label>
+        <label class="option">
+          <input type="radio" name="component" value="ontario-header" />
+          <span><span class="option-title">Header / navigation</span><span class="option-description">The site or application header containing primary navigation.</span></span>
+        </label>
+      </fieldset>
+      <p class="status" id="status" aria-live="polite"></p>
+      <div class="actions">
+        <button class="primary" id="export" type="button">Export JSON</button>
+        <button class="secondary" id="clear" type="button" disabled>Clear</button>
+      </div>
+    </main>
+    <script>
+      const nodeName = document.getElementById('node-name');
+      const nodeType = document.getElementById('node-type');
+      const options = document.getElementById('mapping-options');
+      const status = document.getElementById('status');
+      const exportButton = document.getElementById('export');
+      const clearButton = document.getElementById('clear');
+      let currentNodeId;
+
+      function selectedComponent() {
+        const selected = document.querySelector('input[name="component"]:checked');
+        return selected ? selected.value : undefined;
+      }
+
+      function setSelectionState(state) {
+        const hasSingleSelection = state.selectionCount === 1;
+        currentNodeId = state.nodeId;
+        options.disabled = !hasSingleSelection;
+        document.querySelectorAll('.option').forEach((option) => { option.classList.remove('is-saved'); });
+        status.className = 'status';
+
+        if (!hasSingleSelection) {
+          nodeName.textContent = state.selectionCount === 0 ? 'Nothing selected' : `${state.selectionCount} layers selected`;
+          nodeType.textContent = state.selectionCount === 0 ? 'Select one layer in the canvas to begin.' : 'Choose exactly one layer to create a mapping.';
+          document.querySelectorAll('input[name="component"]').forEach((input) => { input.checked = false; });
+          clearButton.disabled = true;
+          status.textContent = '';
+          return;
+        }
+
+        nodeName.textContent = state.nodeName;
+        nodeType.textContent = state.nodeType.toLowerCase().replaceAll('_', ' ');
+        document.querySelectorAll('input[name="component"]').forEach((input) => { input.checked = input.value === state.mapping; });
+        clearButton.disabled = !state.mapping;
+        if (state.mapping) {
+          const savedInput = document.querySelector(`input[value="${state.mapping}"]`);
+          if (savedInput) savedInput.closest('.option').classList.add('is-saved');
+          status.classList.add('is-saved');
+          status.textContent = '✓ Saved to this layer.';
+        } else {
+          status.textContent = 'Choose a component to save it automatically.';
+        }
+      }
+
+      options.addEventListener('change', () => {
+        const component = selectedComponent();
+        document.querySelectorAll('.option').forEach((option) => { option.classList.remove('is-saved'); });
+        status.className = 'status is-saving';
+        status.textContent = 'Saving…';
+        if (component && currentNodeId) {
+          parent.postMessage({ pluginMessage: { type: 'save-mapping', component, nodeId: currentNodeId } }, '*');
+        }
+      });
+
+      clearButton.addEventListener('click', () => {
+        if (currentNodeId) {
+          parent.postMessage({ pluginMessage: { type: 'clear-mapping', nodeId: currentNodeId } }, '*');
+        }
+      });
+
+      exportButton.addEventListener('click', () => {
+        exportButton.disabled = true;
+        exportButton.textContent = 'Exporting…';
+        parent.postMessage({ pluginMessage: { type: 'export-mappings' } }, '*');
+      });
+
+      function downloadJson(fileName, data) {
+        const json = JSON.stringify(data, null, 2);
+        const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+        exportButton.disabled = false;
+        exportButton.textContent = 'Export JSON';
+      }
+
+      window.onmessage = (event) => {
+        const message = event.data.pluginMessage;
+        if (message && message.type === 'selection-state') setSelectionState(message.state);
+        if (message && message.type === 'export-data') downloadJson(message.fileName, message.data);
+      };
+
+      parent.postMessage({ pluginMessage: { type: 'ui-ready' } }, '*');
+    </script>
+  </body>
+</html>

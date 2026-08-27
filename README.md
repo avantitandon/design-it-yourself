@@ -1,40 +1,26 @@
-Below are the steps to get your plugin running. You can also find instructions at:
+#  Design System Mapper
 
-  https://www.figma.com/plugin-docs/plugin-quickstart-guide/
+A Figma plugin for associating canvas layers with supported Design System components.
 
-This plugin template uses Typescript and NPM, two standard tools in creating JavaScript applications.
+## Supported mappings
 
-First, download Node.js which comes with NPM. This will allow you to install TypeScript and other
-libraries. You can find the download link here:
+- Button
+- Text input
+- Header / navigation
 
-  https://nodejs.org/en/download/
+Mappings save automatically when an option is chosen. The plugin keeps one document-level mapping set with one target each for Button, Text input, and Header / navigation. Assigning a new node to a category replaces its previous target. A green state confirms that the selected node is the saved target.
 
-Next, install TypeScript using the command:
+Choose **Export JSON** to download that single mapping set. Each category contains its saved page and node identity, or `null` when it has not been mapped.
 
-  npm install -g typescript
+## Develop
 
-Finally, in the directory of your plugin, get the latest type definitions for the plugin API by running:
+```sh
+npm install
+npm run build
+```
 
-  npm install --save-dev @figma/plugin-typings
+Import `manifest.json` through **Figma → Plugins → Development → Import plugin from manifest**. Run `npm run watch` while developing to rebuild `code.js` after changes.
 
-If you are familiar with JavaScript, TypeScript will look very familiar. In fact, valid JavaScript code
-is already valid Typescript code.
+## Plugin data
 
-TypeScript adds type annotations to variables. This allows code editors such as Visual Studio Code
-to provide information about the Figma API while you are writing code, as well as help catch bugs
-you previously didn't notice.
-
-For more information, visit https://www.typescriptlang.org/
-
-Using TypeScript requires a compiler to convert TypeScript (code.ts) into JavaScript (code.js)
-for the browser to run.
-
-We recommend writing TypeScript code using Visual Studio code:
-
-1. Download Visual Studio Code if you haven't already: https://code.visualstudio.com/.
-2. Open this directory in Visual Studio Code.
-3. Compile TypeScript to JavaScript: Run the "Terminal > Run Build Task..." menu item,
-    then select "npm: watch". You will have to do this again every time
-    you reopen Visual Studio Code.
-
-That's it! Visual Studio Code will regenerate the JavaScript file every time you save.
+The plugin writes one versioned JSON payload to the document-level `ontario.design-system.mappings.v2` key. Older per-node v1 data is ignored so component instances cannot multiply the exported mappings.
